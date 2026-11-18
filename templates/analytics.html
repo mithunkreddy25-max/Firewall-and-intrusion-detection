@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Analytics • Campus Secure SOC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <header class="soc-header">
+        <div class="header-top">
+            <div class="brand-wrapper">
+                <div class="brand-shield">🛡️</div>
+                <div class="brand-text">
+                    <h1>CAMPUS SECURE SOC</h1>
+                    <span>Deep Security Telemetry &amp; Threat Intelligence</span>
+                </div>
+            </div>
+            <div class="header-telemetry">
+                <div class="live-clock mono" id="live-utc-clock">--:--:-- UTC</div>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-primary" style="font-size:0.8rem;">&larr; Back to Dashboard</a>
+            </div>
+        </div>
+        <nav class="nav-bar">
+            <a href="{{ url_for('dashboard') }}" class="nav-link">📊 Dashboard</a>
+            <a href="{{ url_for('dashboard') }}#topology-section" class="nav-link">🌐 Topology</a>
+            <a href="{{ url_for('simulation') }}" class="nav-link">⚡ Traffic Simulator</a>
+            <a href="{{ url_for('analytics') }}" class="nav-link active">📈 Analytics</a>
+            <a href="{{ url_for('rules_page') }}" class="nav-link">🛡️ Firewall Rules</a>
+            <a href="{{ url_for('report_page') }}" class="nav-link">📑 Executive Report</a>
+            <a href="{{ url_for('settings_page') }}" class="nav-link">⚙️ Settings</a>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Metrics Header -->
+        <div class="metrics-grid">
+            <div class="metric-card card-total">
+                <div class="metric-header">
+                    <span class="metric-title">Total Inspected Packets</span>
+                    <span class="metric-icon">📦</span>
+                </div>
+                <div class="metric-value mono">{{ stats.total_traffic }}</div>
+                <div class="metric-footer">
+                    <span>SQLite Real-Time Store</span>
+                </div>
+            </div>
+
+            <div class="metric-card card-allowed">
+                <div class="metric-header">
+                    <span class="metric-title">Enforced Block Rate</span>
+                    <span class="metric-icon">🛡️</span>
+                </div>
+                <div class="metric-value mono" style="color:#f87171;">{{ stats.blocked_pct }}%</div>
+                <div class="metric-footer">
+                    <span>{{ stats.blocked_count }} Blocked Packets</span>
+                </div>
+            </div>
+
+            <div class="metric-card card-alerts">
+                <div class="metric-header">
+                    <span class="metric-title">Active Threat Posture</span>
+                    <span class="metric-icon">⚠️</span>
+                </div>
+                <div class="metric-value mono" style="color:#fbbf24;">{{ stats.threat_level }}</div>
+                <div class="metric-footer">
+                    <span>Score: {{ stats.threat_score }}/100</span>
+                </div>
+            </div>
+
+            <div class="metric-card card-blocked">
+                <div class="metric-header">
+                    <span class="metric-title">Total Anomalies Flagged</span>
+                    <span class="metric-icon">🚨</span>
+                </div>
+                <div class="metric-value mono" style="color:#a855f7;">{{ stats.alerts_count }}</div>
+                <div class="metric-footer">
+                    <span>Multi-Vector Signatures</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="two-col-grid">
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h2>📊 Incident Severity Breakdown</h2>
+                        <p class="section-subtitle">Distribution of security events by assigned risk level</p>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="severityBarChart"></canvas>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h2>🎯 Attack Vector Distribution</h2>
+                        <p class="section-subtitle">Relative proportion of detected intrusion patterns</p>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="attackDonutChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Talkers and Threat Sources -->
+        <div class="two-col-grid">
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h2>📡 Top Traffic Source Subnets</h2>
+                        <p class="section-subtitle">Most active originators in the campus network</p>
+                    </div>
+                </div>
+                <table id="events-table">
+                    <thead>
+                        <tr>
+                            <th>Origin Zone</th>
+                            <th>Subnet CIDR</th>
+                            <th>Packets</th>
+                            <th>Posture</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in stats.top_sources %}
+                        <tr>
+                            <td><span class="zone-tag">{{ s.zone }}</span></td>
+                            <td class="mono" style="color:#38bdf8;">{{ zones[s.zone] or 'N/A' }}</td>
+                            <td class="mono" style="font-weight:700;">{{ s.count }}</td>
+                            <td>
+                                {% if s.zone == 'Student Lab' %}
+                                    <span class="badge-med">High Activity</span>
+                                {% elif s.zone == 'Public Web Server / DMZ' %}
+                                    <span class="badge-critical">Perimeter Watch</span>
+                                {% else %}
+                                    <span class="badge-safe">Trusted</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" style="text-align:center; color:#64748b;">No traffic recorded yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h2>🎯 Top Target Subnets</h2>
+                        <p class="section-subtitle">Most frequently accessed destinations</p>
+                    </div>
+                </div>
+                <table id="events-table">
+                    <thead>
+                        <tr>
+                            <th>Target Zone</th>
+                            <th>Subnet CIDR</th>
+                            <th>Inbound Packets</th>
+                            <th>Policy Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in stats.top_destinations %}
+                        <tr>
+                            <td><span class="zone-tag">{{ d.zone }}</span></td>
+                            <td class="mono" style="color:#38bdf8;">{{ zones[d.zone] or 'N/A' }}</td>
+                            <td class="mono" style="font-weight:700;">{{ d.count }}</td>
+                            <td>
+                                {% if d.zone == 'Public Web Server / DMZ' %}
+                                    <span class="badge-allowed">Public Services</span>
+                                {% elif d.zone == 'Administration' %}
+                                    <span class="badge-critical">Strict Isolation</span>
+                                {% else %}
+                                    <span class="badge-low">Regulated</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" style="text-align:center; color:#64748b;">No traffic recorded yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <footer class="soc-footer">
+        <p>Campus Secure Network Monitoring Platform • College Network Defense Software Simulation • Powered by Flask &amp; SQLite</p>
+    </footer>
+
+    <script>
+        // Clock
+        function updateClock() {
+            const clock = document.getElementById('live-utc-clock');
+            if (clock) {
+                const now = new Date();
+                clock.textContent = `${now.toISOString().replace('T', ' ').substring(0, 19)} UTC`;
+            }
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Severity Bar Chart
+        const sevData = {{ stats.severity_breakdown | tojson }};
+        const sevCtx = document.getElementById('severityBarChart');
+        if (sevCtx) {
+            new Chart(sevCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Critical', 'High', 'Medium', 'Low', 'Safe'],
+                    datasets: [{
+                        label: 'Incidents Count',
+                        data: [
+                            sevData.CRITICAL || 0,
+                            sevData.HIGH || 0,
+                            sevData.MEDIUM || 0,
+                            sevData.LOW || 0,
+                            sevData.SAFE || 0
+                        ],
+                        backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#38bdf8', '#10b981'],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+                        y: { beginAtZero: true, ticks: { color: '#64748b', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.04)' } }
+                    }
+                }
+            });
+        }
+
+        // Attack Donut Chart
+        const attackDist = {{ stats.attack_distribution | tojson }};
+        const attackCtx = document.getElementById('attackDonutChart');
+        if (attackCtx) {
+            const labels = Object.keys(attackDist);
+            const data = Object.values(attackDist);
+            new Chart(attackCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels.length ? labels : ['No Attacks Recorded'],
+                    datasets: [{
+                        data: data.length ? data : [1],
+                        backgroundColor: ['#38bdf8', '#f59e0b', '#10b981', '#ef4444', '#a855f7', '#ec4899', '#6366f1'],
+                        borderWidth: 1,
+                        borderColor: '#111827'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { color: '#94a3b8', font: { family: 'Inter', size: 10 }, boxWidth: 12 } }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+    </script>
+</body>
+</html>
+

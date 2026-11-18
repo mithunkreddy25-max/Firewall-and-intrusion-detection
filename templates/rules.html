@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firewall Rules Management • Campus Secure SOC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="soc-header">
+        <div class="header-top">
+            <div class="brand-wrapper">
+                <div class="brand-shield">🛡️</div>
+                <div class="brand-text">
+                    <h1>CAMPUS SECURE SOC</h1>
+                    <span>Firewall Policy &amp; Access Control Lists</span>
+                </div>
+            </div>
+            <div class="header-telemetry">
+                <button id="add-rule-btn" class="btn btn-primary" style="font-size:0.8rem;">➕ Add Custom Rule</button>
+                <button id="reset-rules-btn" class="btn" style="font-size:0.8rem;">🔄 Reset Defaults</button>
+                <a href="{{ url_for('dashboard') }}" class="btn" style="font-size:0.8rem;">&larr; Dashboard</a>
+            </div>
+        </div>
+        <nav class="nav-bar">
+            <a href="{{ url_for('dashboard') }}" class="nav-link">📊 Dashboard</a>
+            <a href="{{ url_for('dashboard') }}#topology-section" class="nav-link">🌐 Topology</a>
+            <a href="{{ url_for('simulation') }}" class="nav-link">⚡ Traffic Simulator</a>
+            <a href="{{ url_for('analytics') }}" class="nav-link">📈 Analytics</a>
+            <a href="{{ url_for('rules_page') }}" class="nav-link active">🛡️ Firewall Rules</a>
+            <a href="{{ url_for('report_page') }}" class="nav-link">📑 Executive Report</a>
+            <a href="{{ url_for('settings_page') }}" class="nav-link">⚙️ Settings</a>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Notice Banner -->
+        <div class="simulation-notice">
+            <div>
+                <strong>Rule Priority Evaluation:</strong> Rules are evaluated sequentially in ascending priority order (Priority 10 evaluates before Priority 100). The first matching rule determines the allow or block decision.
+            </div>
+        </div>
+
+        <section class="section-card">
+            <div class="section-header">
+                <div>
+                    <h2>🛡️ Active Firewall Policy Rules</h2>
+                    <p class="section-subtitle">Configurable packet filtering policies evaluated against all simulated network traffic</p>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="events-table">
+                    <thead>
+                        <tr>
+                            <th>Priority</th>
+                            <th>Rule Name</th>
+                            <th>Source Zone</th>
+                            <th>Destination Zone</th>
+                            <th>Port(s)</th>
+                            <th>Protocol</th>
+                            <th>Action</th>
+                            <th>Status</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rules-table-body">
+                        {% for r in rules %}
+                        <tr>
+                            <td class="mono" style="font-weight:700; color:#38bdf8;">{{ r.priority }}</td>
+                            <td style="font-weight:600; color:#f1f5f9;">{{ r.name }}</td>
+                            <td><span class="zone-tag">{{ r.source }}</span></td>
+                            <td><span class="zone-tag">{{ r.destination }}</span></td>
+                            <td class="mono" style="color:#fbbf24;">{{ r.port }}</td>
+                            <td class="mono" style="font-weight:700;">{{ r.protocol }}</td>
+                            <td>
+                                {% if r.action == 'allow' %}
+                                    <span class="badge-allowed">ALLOW</span>
+                                {% else %}
+                                    <span class="badge-blocked">DENY</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <label class="switch">
+                                    <input type="checkbox" onchange="toggleRule({{ r.id }})" {% if r.enabled %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                            </td>
+                            <td style="font-size:0.78rem; color:#94a3b8; max-width:240px; white-space:normal;">{{ r.description }}</td>
+                            <td>
+                                <button class="btn btn-danger" style="padding:0.25rem 0.5rem; font-size:0.74rem;" onclick="deleteRule({{ r.id }})">Delete</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Add Rule Modal -->
+    <div id="add-rule-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h3 class="modal-title">➕ Create New Firewall Rule</h3>
+                    <p style="font-size:0.75rem; color:#94a3b8;">Add a custom packet filtering rule to the college security policy</p>
+                </div>
+                <button type="button" class="close-btn" onclick="closeAddRuleModal()">&times;</button>
+            </div>
+
+            <form id="add-rule-form">
+                <div style="display:flex; flex-direction:column; gap:0.85rem;">
+                    <div>
+                        <label style="display:block; font-size:0.78rem; font-weight:700; color:#94a3b8; margin-bottom:0.25rem;">Rule Name:</label>
+                        <input type="text" id="new-rule-name" required placeholder="e.g. Allow Faculty SSH Access" style="width:100%;">
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+                        <div>
+                            <label style="display:block; font-size:0.78rem; font-weight:700; color:#94a3b8; margin-bottom:0.25rem;">Source Zone:</label>
+                            <select id="new-rule-src" style="width:100%;">
+                                <option value="ANY">ANY (All Zones)</option>
+                                <option value="SAME_ZONE">SAME_ZONE (Intra-Zone)</option>
+                                {% for z in zones %}
+                                <option value="{{ z }}">{{ z }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.78rem; font-weight:700; color:#94a3b8; margin-bottom:0.25rem;">Destination Zone:</label>
+                            <select id="new-rule-dst" style="width:100%;">
+                                <option value="ANY">ANY (All Zones)</option>
+                                <option value="SAME_ZONE">SAME_ZONE (Intra-Zone)</option>
+                                {% for z in zones %}
+                                <option value="{{ z }}">{{ z }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:0.75rem;">
+                        <div>
+                            <label style="display:block; font-size:0.78rem; font-weight:700; color:#94a3b8; margin-bottom:0.25rem;">Port(s):</label>
+                            <input type="text" id="new-rule-port" value="*" placeholder="* or 80,443" style="width:100%;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.78rem; font-weight:700; color:#94a3b8; margin-bottom:0.25rem;">Protocol:</label>
+                            <select id="new-rule-proto" style="width:100%;">
+                                <option value="TCP">TCP</option>
+                                <option value="UDP">UDP</option>
+                                <option value="ANY">ANY</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.78rem; font-weight:700; color:#94a3b8; margin-bottom:0.25rem;">Action:</label>
+                            <select id="new-rule-action" style="width:100%;">
+                                <option value="allow">ALLOW</option>
+                                <option value="deny">DENY</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 2fr; gap:0.75rem;">
+                        <div>
+                            <label style="display:block; font-size:0.78rem; font-weight:700; color:#94a3b8; margin-bottom:0.25rem;">Priority Order:</label>
+                            <input type="number" id="new-rule-priority" value="50" min="1" max="999" style="width:100%;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.78rem; font-weight:700; color:#94a3b8; margin-bottom:0.25rem;">Description:</label>
+                            <input type="text" id="new-rule-desc" placeholder="Rule justification..." style="width:100%;">
+                        </div>
+                    </div>
+
+                    <div class="btn-group" style="margin-top:0.75rem; justify-content: flex-end;">
+                        <button type="button" class="btn" onclick="closeAddRuleModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Rule</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer class="soc-footer">
+        <p>Campus Secure Network Monitoring Platform • College Network Defense Software Simulation • Powered by Flask &amp; SQLite</p>
+    </footer>
+
+    <script>
+        const addRuleModal = document.getElementById('add-rule-modal');
+        document.getElementById('add-rule-btn').addEventListener('click', () => {
+            addRuleModal.classList.add('active');
+        });
+
+        function closeAddRuleModal() {
+            addRuleModal.classList.remove('active');
+        }
+
+        document.getElementById('add-rule-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('new-rule-name').value,
+                source: document.getElementById('new-rule-src').value,
+                destination: document.getElementById('new-rule-dst').value,
+                port: document.getElementById('new-rule-port').value,
+                protocol: document.getElementById('new-rule-proto').value,
+                action: document.getElementById('new-rule-action').value,
+                priority: parseInt(document.getElementById('new-rule-priority').value) || 50,
+                description: document.getElementById('new-rule-desc').value
+            };
+
+            const resp = await fetch('/api/rules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (resp.ok) {
+                window.location.reload();
+            } else {
+                alert('Failed to save rule.');
+            }
+        });
+
+        async function toggleRule(id) {
+            await fetch(`/api/rules/${id}/toggle`, { method: 'POST' });
+        }
+
+        async function deleteRule(id) {
+            if (!confirm('Are you sure you want to delete this firewall rule?')) return;
+            const resp = await fetch(`/api/rules/${id}`, { method: 'DELETE' });
+            if (resp.ok) window.location.reload();
+        }
+
+        document.getElementById('reset-rules-btn').addEventListener('click', async () => {
+            if (!confirm('Restore default recommended firewall rules?')) return;
+            const resp = await fetch('/api/rules/reset', { method: 'POST' });
+            if (resp.ok) window.location.reload();
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Security Report • Campus Secure SOC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="soc-header no-print">
+        <div class="header-top">
+            <div class="brand-wrapper">
+                <div class="brand-shield">🛡️</div>
+                <div class="brand-text">
+                    <h1>CAMPUS SECURE SOC</h1>
+                    <span>Executive Cybersecurity Intelligence Brief</span>
+                </div>
+            </div>
+            <div class="header-telemetry">
+                <button class="btn btn-primary" onclick="window.print()">🖨️ Print / Save as PDF</button>
+                <a href="{{ url_for('dashboard') }}" class="btn">&larr; Back to Dashboard</a>
+            </div>
+        </div>
+        <nav class="nav-bar">
+            <a href="{{ url_for('dashboard') }}" class="nav-link">📊 Dashboard</a>
+            <a href="{{ url_for('dashboard') }}#topology-section" class="nav-link">🌐 Topology</a>
+            <a href="{{ url_for('simulation') }}" class="nav-link">⚡ Traffic Simulator</a>
+            <a href="{{ url_for('analytics') }}" class="nav-link">📈 Analytics</a>
+            <a href="{{ url_for('rules_page') }}" class="nav-link">🛡️ Firewall Rules</a>
+            <a href="{{ url_for('report_page') }}" class="nav-link active">📑 Executive Report</a>
+            <a href="{{ url_for('settings_page') }}" class="nav-link">⚙️ Settings</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="section-card" style="border-top: 4px solid var(--cyber-cyan);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1.25rem;">
+                <div>
+                    <h1 style="font-size: 1.6rem; font-weight: 800; color:#f8fafc; margin-bottom: 0.35rem;">CAMPUS NETWORK DEFENSE EXECUTIVE REPORT</h1>
+                    <p style="font-size: 0.85rem; color: var(--text-muted);">Confidential Information Security Operations Summary • College Administration</p>
+                </div>
+                <div style="text-align: right; font-size: 0.8rem; color: #94a3b8;">
+                    <div>Report Generated: <span class="mono" style="color:#f8fafc;">{{ now_str }}</span></div>
+                    <div>Classification: <strong style="color:#ef4444;">INTERNAL USE ONLY</strong></div>
+                </div>
+            </div>
+
+            <!-- Executive Summary Paragraph -->
+            <div style="margin-bottom: 1.75rem;">
+                <h3 style="font-size: 1.05rem; font-weight: 700; color:#38bdf8; margin-bottom: 0.5rem;">1. Executive Summary &amp; Threat Posture</h3>
+                <p style="font-size: 0.88rem; color:#cbd5e1; line-height: 1.6;">
+                    The Campus Perimeter Firewall and Intrusion Detection System inspected a total of 
+                    <strong>{{ stats.total_traffic }} network packets</strong> across isolated subnets 
+                    (Student Lab, Faculty, Administration, and Public DMZ). 
+                    The overall campus threat posture is currently evaluated as 
+                    <strong style="color: {% if stats.threat_level == 'CRITICAL' %}#ef4444{% elif stats.threat_level == 'HIGH' %}#f97316{% elif stats.threat_level == 'ELEVATED' %}#f59e0b{% else %}#10b981{% endif %};">
+                        {{ stats.threat_level }}
+                    </strong> (Threat Index: {{ stats.threat_score }}/100). 
+                    A total of <strong>{{ stats.blocked_count }} unauthorized attempts ({{ stats.blocked_pct }}%)</strong> were strictly blocked by zero-trust firewall policy rules, preventing lateral movement and administrative compromise.
+                </p>
+            </div>
+
+            <!-- Key Metrics Table -->
+            <div style="margin-bottom: 1.75rem;">
+                <h3 style="font-size: 1.05rem; font-weight: 700; color:#38bdf8; margin-bottom: 0.75rem;">2. Security Metrics Summary</h3>
+                <table id="events-table">
+                    <thead>
+                        <tr>
+                            <th>Security Metric</th>
+                            <th>Value</th>
+                            <th>Benchmark Assessment</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Total Inspected Traffic</td>
+                            <td class="mono" style="font-weight:700;">{{ stats.total_traffic }} packets</td>
+                            <td>100% DPI Software Emulation</td>
+                        </tr>
+                        <tr>
+                            <td>Authorized Traffic Allowed</td>
+                            <td class="mono" style="color:#34d399; font-weight:700;">{{ stats.allowed_count }} ({{ stats.allowed_pct }}%)</td>
+                            <td>Legitimate Intra-Zone &amp; Public Web Services</td>
+                        </tr>
+                        <tr>
+                            <td>Prohibited Traffic Blocked</td>
+                            <td class="mono" style="color:#f87171; font-weight:700;">{{ stats.blocked_count }} ({{ stats.blocked_pct }}%)</td>
+                            <td>Active Access Control List Enforcement</td>
+                        </tr>
+                        <tr>
+                            <td>IDS Anomaly Alerts Triggered</td>
+                            <td class="mono" style="color:#fbbf24; font-weight:700;">{{ stats.alerts_count }} incidents</td>
+                            <td>Multi-vector Heuristic Matches</td>
+                        </tr>
+                        <tr>
+                            <td>Active Firewall Policy Rules</td>
+                            <td class="mono">{{ stats.active_rules_count }} rules</td>
+                            <td>Sequential Priority Enforcement</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Incident Breakdown -->
+            <div style="margin-bottom: 1.75rem;">
+                <h3 style="font-size: 1.05rem; font-weight: 700; color:#38bdf8; margin-bottom: 0.75rem;">3. Incident Severity Distribution</h3>
+                <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:140px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); padding:0.85rem; border-radius:8px;">
+                        <div style="font-size:0.75rem; color:#f87171; font-weight:700;">CRITICAL SEVERITY</div>
+                        <div style="font-size:1.8rem; font-weight:800; color:#ef4444;" class="mono">{{ stats.severity_breakdown.CRITICAL or 0 }}</div>
+                    </div>
+                    <div style="flex:1; min-width:140px; background:rgba(249,115,22,0.1); border:1px solid rgba(249,115,22,0.3); padding:0.85rem; border-radius:8px;">
+                        <div style="font-size:0.75rem; color:#fb923c; font-weight:700;">HIGH SEVERITY</div>
+                        <div style="font-size:1.8rem; font-weight:800; color:#f97316;" class="mono">{{ stats.severity_breakdown.HIGH or 0 }}</div>
+                    </div>
+                    <div style="flex:1; min-width:140px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); padding:0.85rem; border-radius:8px;">
+                        <div style="font-size:0.75rem; color:#fcd34d; font-weight:700;">MEDIUM SEVERITY</div>
+                        <div style="font-size:1.8rem; font-weight:800; color:#f59e0b;" class="mono">{{ stats.severity_breakdown.MEDIUM or 0 }}</div>
+                    </div>
+                    <div style="flex:1; min-width:140px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); padding:0.85rem; border-radius:8px;">
+                        <div style="font-size:0.75rem; color:#7dd3fc; font-weight:700;">LOW SEVERITY</div>
+                        <div style="font-size:1.8rem; font-weight:800; color:#38bdf8;" class="mono">{{ stats.severity_breakdown.LOW or 0 }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Incidents Stream -->
+            <div style="margin-bottom: 1.75rem;">
+                <h3 style="font-size: 1.05rem; font-weight: 700; color:#38bdf8; margin-bottom: 0.75rem;">4. Recent Audit Log (Last 25 Incidents)</h3>
+                <div class="table-container">
+                    <table id="events-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Source</th>
+                                <th>Destination</th>
+                                <th>Port</th>
+                                <th>Decision</th>
+                                <th>Severity</th>
+                                <th>Policy Rule Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in recent %}
+                            <tr>
+                                <td class="mono" style="font-size:0.75rem; color:#94a3b8;">{{ r.timestamp[:19].replace('T', ' ') }}</td>
+                                <td>{{ r.source }}</td>
+                                <td>{{ r.destination }}</td>
+                                <td class="mono">{{ r.port }}/{{ r.protocol.upper() }}</td>
+                                <td>
+                                    {% if r.decision == 'allow' %}
+                                        <span class="badge-allowed">ALLOWED</span>
+                                    {% else %}
+                                        <span class="badge-blocked">BLOCKED</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge-{{ r.severity.lower() }}">{{ r.severity }}</span>
+                                </td>
+                                <td style="font-size:0.78rem; color:#cbd5e1;">{{ r.reason }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="7" style="text-align:center; color:#64748b;">No recent events recorded.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="remediation-box">
+                <div class="remediation-title">5. Priority SOC Analyst Recommendations</div>
+                <ul style="margin-left: 1.5rem; font-size: 0.84rem; color: #cbd5e1; line-height: 1.6;">
+                    <li><strong>Perimeter Isolation:</strong> Ensure Public DMZ web instances cannot initiate outbound connections to Student or Administration subnets.</li>
+                    <li><strong>Student Lab Egress Filtering:</strong> Maintain strict block on direct SMB (445), MSSQL (1433), and MySQL (3306) ports into Administration.</li>
+                    <li><strong>Authentication Hardening:</strong> Enforce multi-factor authentication on all external SSH (port 22) and RDP (port 3389) endpoints.</li>
+                    <li><strong>Continuous Inspection:</strong> Keep automated intrusion detection and alert streaming active during peak campus instructional hours.</li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <footer class="soc-footer no-print">
+        <p>Campus Secure Network Monitoring Platform • College Network Defense Software Simulation • Powered by Flask &amp; SQLite</p>
+    </footer>
+</body>
+</html>
+

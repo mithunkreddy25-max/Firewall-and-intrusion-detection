@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic Simulation • Campus Secure SOC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="soc-header">
+        <div class="header-top">
+            <div class="brand-wrapper">
+                <div class="brand-shield">🛡️</div>
+                <div class="brand-text">
+                    <h1>CAMPUS SECURE SOC</h1>
+                    <span>Traffic Simulation &amp; Packet Injection Lab</span>
+                </div>
+            </div>
+            <div class="header-telemetry">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-primary" style="font-size:0.8rem;">&larr; Back to Dashboard</a>
+            </div>
+        </div>
+        <nav class="nav-bar">
+            <a href="{{ url_for('dashboard') }}" class="nav-link">📊 Dashboard</a>
+            <a href="{{ url_for('dashboard') }}#topology-section" class="nav-link">🌐 Topology</a>
+            <a href="{{ url_for('simulation') }}" class="nav-link active">⚡ Traffic Simulator</a>
+            <a href="{{ url_for('analytics') }}" class="nav-link">📈 Analytics</a>
+            <a href="{{ url_for('rules_page') }}" class="nav-link">🛡️ Firewall Rules</a>
+            <a href="{{ url_for('report_page') }}" class="nav-link">📑 Executive Report</a>
+            <a href="{{ url_for('settings_page') }}" class="nav-link">⚙️ Settings</a>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Notice Banner -->
+        <div class="simulation-notice">
+            <div>
+                <strong>Interactive Packet Injection:</strong> Inject synthetic TCP/UDP connections between college subnets to test firewall rule evaluation and IDS heuristic triggers in real time.
+            </div>
+        </div>
+
+        <!-- Quick Scenario Presets -->
+        <section class="section-card">
+            <div class="section-header">
+                <div>
+                    <h2>🎯 Fast Scenario Presets</h2>
+                    <p class="section-subtitle">Click any preset to prefill the packet parameters</p>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button type="button" class="btn" onclick="applyPreset('Faculty', 'Public Web Server / DMZ', 'TCP', 80)">🌐 DMZ Web (Port 80 • Allow)</button>
+                <button type="button" class="btn" onclick="applyPreset('Student Lab', 'Public Web Server / DMZ', 'TCP', 443)">🔒 DMZ HTTPS (Port 443 • Allow)</button>
+                <button type="button" class="btn" onclick="applyPreset('Student Lab', 'Student Lab', 'TCP', 22)">🤝 Local Trust (Intra-Zone • Allow)</button>
+                <button type="button" class="btn" onclick="applyPreset('Student Lab', 'Faculty', 'TCP', 22)">⚠️ Student to Faculty SSH (Block)</button>
+                <button type="button" class="btn" onclick="applyPreset('Student Lab', 'Administration', 'TCP', 1433)">🚨 Student to Admin DB (MSSQL 1433)</button>
+                <button type="button" class="btn" onclick="applyPreset('Public Web Server / DMZ', 'Faculty', 'TCP', 22)">⚡ DMZ Lateral Movement (Port 22)</button>
+            </div>
+        </section>
+
+        <!-- Simulation Form Section -->
+        <section class="section-card">
+            <div class="section-header">
+                <div>
+                    <h2>⚡ Inject Simulated Connection</h2>
+                    <p class="section-subtitle">Specify network endpoints, protocol, and target service port</p>
+                </div>
+            </div>
+
+            <form id="sim-form" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; align-items: end;">
+                <div>
+                    <label for="source" style="display:block; font-size:0.8rem; font-weight:700; color:#94a3b8; margin-bottom:0.4rem;">Source Subnet Zone:</label>
+                    <select id="source" name="source" required style="width:100%;"></select>
+                </div>
+
+                <div>
+                    <label for="destination" style="display:block; font-size:0.8rem; font-weight:700; color:#94a3b8; margin-bottom:0.4rem;">Destination Subnet Zone:</label>
+                    <select id="destination" name="destination" required style="width:100%;"></select>
+                </div>
+
+                <div>
+                    <label for="protocol" style="display:block; font-size:0.8rem; font-weight:700; color:#94a3b8; margin-bottom:0.4rem;">Transport Protocol:</label>
+                    <select id="protocol" name="protocol" required style="width:100%;">
+                        <option value="TCP">TCP</option>
+                        <option value="UDP">UDP</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="port" style="display:block; font-size:0.8rem; font-weight:700; color:#94a3b8; margin-bottom:0.4rem;">Target Port (1-65535):</label>
+                    <input type="number" id="port" name="port" min="1" max="65535" required style="width:100%;" value="80" />
+                </div>
+
+                <div class="btn-group" style="grid-column: 1 / -1; margin-top: 0.5rem;">
+                    <button type="submit" class="btn btn-primary" style="padding: 0.7rem 1.4rem; font-size: 0.95rem;">🚀 Test Connection</button>
+                    <button type="button" id="reset-btn" class="btn">🔄 Reset Scenario State</button>
+                </div>
+            </form>
+
+            <!-- Results Display Container -->
+            <div id="result" style="margin-top: 1.75rem;"></div>
+        </section>
+    </main>
+
+    <footer class="soc-footer">
+        <p>Campus Secure Network Monitoring Platform • College Network Defense Software Simulation • Powered by Flask &amp; SQLite</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/simulation.js') }}"></script>
+    <script>
+        function applyPreset(src, dst, proto, port) {
+            document.getElementById('source').value = src;
+            document.getElementById('destination').value = dst;
+            document.getElementById('protocol').value = proto;
+            document.getElementById('port').value = port;
+        }
+    </script>
+</body>
+</html>
